@@ -155,6 +155,7 @@ class centroidMulti(centroid):
     # @todo    fill out.
 
     pass
+  
 
   #============================== measure ==============================
   #
@@ -180,6 +181,7 @@ class centroidMulti(centroid):
     if (self.tparams.minArea > 0):
       morph.remove_small_objects(Ip, self.tparams.minArea, 1, out = Ip)
 
+    self.Ip = Ip
     (Il, nl) = label(Ip, None, True, self.tparams.regConn)
     # @todo Consider how might use nl return value.
 
@@ -201,46 +203,6 @@ class centroidMulti(centroid):
 
     self.tpt = np.array(binReg).T # from N x 2 to 2 x N
 
-    # Compute the pixel locations for suction cup to be sent
-    
-    binImg = Ip.astype(int)
-    
-    suc_target_loc = []
-
-    for ri in regProps:
-      if ri.area < self.tparams.maxArea and ri.area > self.tparams.minArea:
-        # Create an image with only puzzle visible
-        piece_mask = np.zeros_like(binImg)
-        for loc in ri.coords:
-          piece_mask[loc[0], loc[1]] = binImg[loc[0], loc[1]]
-        
-        # Create kernel based on image size
-        s = int(np.sqrt(ri.area / 4)) + 2
-        kernel = np.ones((s,s))
-
-        # Convolve across image with 1 piece to get scores
-        output_scores = convolve2d(piece_mask, kernel, mode='same', boundary='fill', fillvalue=0)
-        max_val = 0
-        max_val_loc = []
-        for loc in ri.coords:
-          if output_scores[loc[0]][loc[1]] > max_val:
-            max_val = output_scores[loc[0]][loc[1]]
-            max_val_loc = [loc]
-          elif output_scores[loc[0]][loc[1]] == max_val:
-            max_val_loc.append(loc)
-        
-        # Pick the piece closest to centroid
-        #  (makes it line up along major axis of piece)
-        dist = lambda row, col: (row - ri.centroid[0])**2 + (col - ri.centroid[1])**2
-        minDist = None
-        target = None
-        for loc in max_val_loc:
-            d = dist(loc[0], loc[1])
-            if minDist == None or d < minDist:
-                minDist = d
-                target = loc
-        suc_target_loc.append([target[1], target[0]])
-    self.suc_targets = suc_target_loc
 
     if len(self.tpt) == 0:
       self.haveMeas = False
